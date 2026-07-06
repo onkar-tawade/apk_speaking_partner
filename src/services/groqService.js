@@ -79,6 +79,10 @@ export async function transcribeAudio(audioBlob) {
   formData.append('language', 'en');
   formData.append('response_format', 'json');
   formData.append('temperature', '0');
+  // Priming Whisper with expected context measurably reduces hallucinated/fabricated
+  // sentences on unclear audio - it biases decoding toward plausible casual speech
+  // instead of guessing at unrelated content when the signal is ambiguous.
+  formData.append('prompt', 'This is a casual spoken English conversation practice session.');
 
   const response = await fetch(GROQ_TRANSCRIPTION_URL, {
     method: 'POST',
