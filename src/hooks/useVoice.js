@@ -72,6 +72,7 @@ export function useVoice(onFinalTranscript) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const maxTimerRef = useRef(null);
+  const audioContextRef = useRef(null);
 
   const isWebSttSupported =
     !native && typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices) && typeof window.MediaRecorder !== 'undefined';
@@ -82,6 +83,10 @@ export function useVoice(onFinalTranscript) {
     maxTimerRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+    }
+    audioContextRef.current = null;
   };
 
   const handleRecordingStopped = useCallback(async () => {
@@ -116,9 +121,14 @@ export function useVoice(onFinalTranscript) {
   const startListeningWeb = useCallback(async () => {
     if (!isWebSttSupported) return;
     try {
+      // autoGainControl is back ON - it was turned off earlier only because it was
+      // interfering with automatic silence-detection, which has since been removed
+      // entirely in favor of manual tap-to-record. With no auto-detection left to
+      // confuse, AGC helps boost quiet mics (like earphone mics) back up to a
+      // usable level.
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          autoGainControl: false,
+          autoGainControl: true,
           echoCancellation: true,
           noiseSuppression: true,
         },
@@ -127,7 +137,20 @@ export function useVoice(onFinalTranscript) {
       audioChunksRef.current = [];
       setTranscript('');
 
-      const recorder = new MediaRecorder(stream, {
+      // Extra manual boost on top of AGC - earphone mics in particular tend to
+      // record noticeably quieter than a phone's built-in mic, so this adds
+      // headroom AGC alone doesn't always cover.
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioCtx();
+      const source = audioContext.createMediaStreamSource(stream);
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 1.8;
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(gainNode);
+      gainNode.connect(destination);
+      audioContextRef.current = audioContext;
+
+      const recorder = new MediaRecorder(destination.stream, {
         mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
           : 'audio/webm',
