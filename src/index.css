@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
-  --ink: #1E2A23;
-  --ink-soft: #3A4640;
-  --paper: #EFEFE6;
-  --paper-raised: #F8F7F0;
-  --paper-line: #DCDBCE;
-  --signal: #A8322A;
-  --signal-soft: #F1DAD6;
-  --tape: #2F6F63;
-  --tape-soft: #DCEAE5;
-  --reel: #C79B3B;
-  --reel-soft: #F3E7CB;
-  --mute: #5B6560;
+  --ink: #EDECE4;
+  --ink-soft: #B9B8AE;
+  --paper: #000000;
+  --paper-raised: #161615;
+  --paper-line: #2E2D2A;
+  --signal: #E2574C;
+  --signal-soft: #3A211E;
+  --tape: #4CAF9B;
+  --tape-soft: #17302B;
+  --reel: #D9AE4E;
+  --reel-soft: #322810;
+  --mute: #8A8A82;
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Inter', -apple-system, sans-serif;

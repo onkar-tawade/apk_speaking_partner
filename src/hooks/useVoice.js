@@ -156,26 +156,18 @@ export function useVoice(onFinalTranscript) {
       lowpass.type = 'lowpass';
       lowpass.frequency.value = 3800;
 
-      // Compression BEFORE gain is the actual fix for "recording sounds weak" -
-      // plain gain multiplies quiet and loud parts equally, so it can only be
-      // pushed so far before loud moments start clipping/distorting. Compression
-      // evens out that dynamic range first (brings quiet parts up relative to
-      // loud ones), which then lets gain be pushed much higher safely on top.
-      const compressor = audioContext.createDynamicsCompressor();
-      compressor.threshold.value = -50;
-      compressor.knee.value = 30;
-      compressor.ratio.value = 12;
-      compressor.attack.value = 0.003;
-      compressor.release.value = 0.25;
-
+      // NOTE: a dynamics compressor was tried here and removed - on a recording
+      // that already has background noise, compression pulls quiet moments UP
+      // toward the same level as loud ones, and that includes the noise floor,
+      // not just the voice. That made background noise more audible, not less.
+      // Keeping this simpler: filter + a moderate, safe gain boost only.
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = 2.5;
+      gainNode.gain.value = 1.6;
       const destination = audioContext.createMediaStreamDestination();
 
       source.connect(highpass);
       highpass.connect(lowpass);
-      lowpass.connect(compressor);
-      compressor.connect(gainNode);
+      lowpass.connect(gainNode);
       gainNode.connect(destination);
       audioContextRef.current = audioContext;
 

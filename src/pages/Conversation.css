@@ -176,7 +176,7 @@
   font-family: var(--font-mono);
   background: var(--reel-soft);
   border: 1px solid var(--reel);
-  color: #6B4E10;
+  color: var(--reel);
   padding: 5px 14px;
   border-radius: 20px;
   font-size: 11px;
