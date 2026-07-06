@@ -143,10 +143,26 @@ export function useVoice(onFinalTranscript) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       const audioContext = new AudioCtx();
       const source = audioContext.createMediaStreamSource(stream);
+
+      // Human speech clarity mostly lives between ~100Hz and ~3800Hz - cutting
+      // everything outside that band removes a lot of what actually IS the
+      // "background noise" (low rumble/hum below it, hiss/static above it)
+      // without touching the voice itself.
+      const highpass = audioContext.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.value = 100;
+
+      const lowpass = audioContext.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = 3800;
+
       const gainNode = audioContext.createGain();
       gainNode.gain.value = 1.8;
       const destination = audioContext.createMediaStreamDestination();
-      source.connect(gainNode);
+
+      source.connect(highpass);
+      highpass.connect(lowpass);
+      lowpass.connect(gainNode);
       gainNode.connect(destination);
       audioContextRef.current = audioContext;
 
