@@ -78,6 +78,7 @@ export async function transcribeAudio(audioBlob) {
   formData.append('model', 'whisper-large-v3-turbo');
   formData.append('language', 'en');
   formData.append('response_format', 'json');
+  formData.append('temperature', '0');
 
   const response = await fetch(GROQ_TRANSCRIPTION_URL, {
     method: 'POST',

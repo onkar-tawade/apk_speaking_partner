@@ -11,9 +11,13 @@ import { transcribeAudio } from '../services/groqService';
 
 // Web path only. This is real-microphone-volume silence detection (not the browser's
 // own speech-end guessing, which was the thing cutting people off / mishearing them).
-// NOTE: this threshold is a starting point, not a verified value from a real device -
-// mic sensitivity varies, so it may need adjusting after testing on an actual phone.
-const SILENCE_RMS_THRESHOLD = 12;
+// Instead of one fixed loudness number (which was a guess that didn't hold up across
+// devices/rooms), each turn briefly measures the actual background noise level first,
+// then sets the speech threshold relative to that - adapts per environment instead of
+// needing a manually re-tuned constant.
+const CALIBRATION_MS = 500;
+const SPEECH_MARGIN = 18; // how much louder than the measured background counts as "talking"
+const MIN_THRESHOLD = 8; // floor, in case the room is near-silent
 const SILENCE_DURATION_MS = 3000;
 const MAX_RECORDING_MS = 25000; // safety cap so a stuck recording can't run forever
 
@@ -78,6 +82,9 @@ export function useVoice(onFinalTranscript) {
   const maxTimerRef = useRef(null);
   const hasSpokenRef = useRef(false);
   const silenceStartRef = useRef(null);
+  const calibrationStartRef = useRef(0);
+  const ambientSamplesRef = useRef([]);
+  const dynamicThresholdRef = useRef(null);
 
   const isWebSttSupported =
     !native && typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices) && typeof window.MediaRecorder !== 'undefined';
@@ -110,7 +117,21 @@ export function useVoice(onFinalTranscript) {
     }
     const rms = Math.sqrt(sumSquares / data.length);
 
-    if (rms > SILENCE_RMS_THRESHOLD) {
+    // First half-second of each turn: just measure the room, don't judge it yet.
+    const elapsed = Date.now() - calibrationStartRef.current;
+    if (elapsed < CALIBRATION_MS) {
+      ambientSamplesRef.current.push(rms);
+      rafRef.current = requestAnimationFrame(monitorSilence);
+      return;
+    }
+    if (dynamicThresholdRef.current === null) {
+      const samples = ambientSamplesRef.current;
+      const avgAmbient = samples.length ? samples.reduce((a, b) => a + b, 0) / samples.length : 0;
+      dynamicThresholdRef.current = Math.max(avgAmbient + SPEECH_MARGIN, MIN_THRESHOLD);
+    }
+    const threshold = dynamicThresholdRef.current;
+
+    if (rms > threshold) {
       hasSpokenRef.current = true;
       silenceStartRef.current = null;
     } else if (hasSpokenRef.current) {
@@ -156,6 +177,9 @@ export function useVoice(onFinalTranscript) {
       audioChunksRef.current = [];
       hasSpokenRef.current = false;
       silenceStartRef.current = null;
+      calibrationStartRef.current = Date.now();
+      ambientSamplesRef.current = [];
+      dynamicThresholdRef.current = null;
       setTranscript('');
 
       const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -167,7 +191,12 @@ export function useVoice(onFinalTranscript) {
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
 
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm',
+        audioBitsPerSecond: 128000,
+      });
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
