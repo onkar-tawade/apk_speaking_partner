@@ -16,8 +16,8 @@ import { transcribeAudio } from '../services/groqService';
 // then sets the speech threshold relative to that - adapts per environment instead of
 // needing a manually re-tuned constant.
 const CALIBRATION_MS = 500;
-const SPEECH_MARGIN = 18; // how much louder than the measured background counts as "talking"
-const MIN_THRESHOLD = 8; // floor, in case the room is near-silent
+const SPEECH_MARGIN = 14; // how much louder than the measured background counts as "talking"
+const MIN_THRESHOLD = 6; // floor, in case the room is near-silent
 const SILENCE_DURATION_MS = 3000;
 const MAX_RECORDING_MS = 25000; // safety cap so a stuck recording can't run forever
 
@@ -172,7 +172,18 @@ export function useVoice(onFinalTranscript) {
   const startListeningWeb = useCallback(async () => {
     if (!isWebSttSupported) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // autoGainControl is OFF on purpose - Chrome's default auto gain control is
+      // built for video calls, and it constantly re-normalizes volume in ways that
+      // both broke our pause detection (ambient vs speech levels kept shifting) and
+      // likely degraded what Whisper actually heard. Keeping echo cancellation and
+      // noise suppression on since those still help in real-world noisy conditions.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          autoGainControl: false,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
       mediaStreamRef.current = stream;
       audioChunksRef.current = [];
       hasSpokenRef.current = false;
