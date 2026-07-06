@@ -1,0 +1,134 @@
+.help-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--paper-raised);
+  border-top: 1px solid var(--paper-line);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 18px 22px;
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 40;
+  box-shadow: 0 -6px 20px rgba(30, 42, 35, 0.12);
+}
+
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.help-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--reel);
+  margin: 0;
+}
+
+.help-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--mute);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.help-hint {
+  font-size: 12px;
+  color: var(--mute);
+  margin: 0 0 10px;
+}
+
+.help-form textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--ink);
+  resize: none;
+  box-sizing: border-box;
+}
+
+.help-form button {
+  margin-top: 10px;
+  width: 100%;
+  font-family: var(--font-mono);
+  background: var(--reel);
+  border: none;
+  color: #3A2A05;
+  font-weight: 500;
+  padding: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.help-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.help-clean {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--ink);
+  margin: 4px 0 10px;
+}
+
+.help-play {
+  font-family: var(--font-mono);
+  background: var(--tape-soft);
+  border: 1px solid var(--tape);
+  color: var(--tape);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.help-alts { margin-bottom: 12px; }
+
+.help-alts-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin: 0 0 4px;
+}
+
+.help-alt-line {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 2px 0;
+}
+
+.help-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+  background: var(--reel-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.help-again {
+  width: 100%;
+  font-family: var(--font-mono);
+  background: none;
+  border: 1px solid var(--paper-line);
+  color: var(--mute);
+  font-size: 12px;
+  padding: 9px;
+  border-radius: 8px;
+  cursor: pointer;
+}

@@ -1,0 +1,287 @@
+.conv {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.conv-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--paper-line);
+  flex-shrink: 0;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--tape);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.conv-mode-label {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.end-btn {
+  font-family: var(--font-mono);
+  background: none;
+  border: 1px solid var(--paper-line);
+  color: var(--signal);
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.end-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.conv-page {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 18px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.conv-empty {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--mute);
+  text-align: center;
+  margin-top: 60px;
+  font-style: italic;
+}
+
+.line {
+  margin-bottom: 20px;
+}
+
+.line-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.line-you .line-head { justify-content: flex-end; }
+
+.line-role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.line-replay {
+  background: none;
+  border: none;
+  color: var(--tape);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.line-you .line-replay { color: var(--signal); }
+
+.line-ai .line-role { color: var(--tape); }
+.line-you .line-role { color: var(--signal); text-align: right; }
+.line-you { text-align: right; }
+
+.line-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.line-ai .line-text {
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+
+.line-you .line-text {
+  font-family: var(--font-ui);
+  color: var(--ink-soft);
+}
+
+.thinking {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mute);
+  font-style: italic;
+}
+
+.conv-deck {
+  border-top: 1px solid var(--paper-line);
+  background: var(--paper-raised);
+  padding: 14px 18px 22px;
+  flex-shrink: 0;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.mode-toggle button {
+  font-family: var(--font-mono);
+  background: none;
+  border: 1px solid var(--paper-line);
+  color: var(--mute);
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.mode-toggle button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.help-toggle {
+  font-family: var(--font-mono);
+  background: var(--reel-soft);
+  border: 1px solid var(--reel);
+  color: #6B4E10;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.deck-note {
+  font-size: 12px;
+  color: var(--mute);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.record-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-transcript {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-style: italic;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.record-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--signal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.record-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.record-btn.is-live {
+  border-color: var(--signal);
+  background: var(--signal-soft);
+}
+
+.record-btn.is-live .record-dot {
+  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+}
+
+.record-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--mute);
+  text-align: center;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+
+.waveform span {
+  display: block;
+  width: 3px;
+  height: 6px;
+  background: var(--signal);
+  border-radius: 2px;
+  animation: wave 0.9s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { height: 6px; }
+  50% { height: 20px; }
+}
+
+.text-form {
+  display: flex;
+  gap: 8px;
+}
+
+.text-form input {
+  flex: 1;
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  color: var(--ink);
+  padding: 11px 14px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: var(--font-ui);
+}
+
+.text-form button {
+  font-family: var(--font-mono);
+  background: var(--ink);
+  border: none;
+  color: var(--paper);
+  font-size: 12px;
+  padding: 0 20px;
+  border-radius: 24px;
+  cursor: pointer;
+}
+
+.text-form button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
