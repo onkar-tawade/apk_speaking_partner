@@ -121,6 +121,17 @@
   color: var(--ink-soft);
 }
 
+.line-caption {
+  font-size: 11px;
+  color: var(--mute);
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
+.line-you .voice-note {
+  margin-left: auto;
+}
+
 .thinking {
   font-family: var(--font-mono);
   font-size: 12px;

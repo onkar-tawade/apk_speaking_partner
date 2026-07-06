@@ -11,6 +11,7 @@ import {
 } from '../prompts/systemPrompts';
 import SessionSummary from './SessionSummary';
 import HelpMeSayIt from './HelpMeSayIt';
+import VoiceNoteBubble from './VoiceNoteBubble';
 import './Conversation.css';
 
 export default function Conversation({ mode, config, onExit }) {
@@ -51,9 +52,9 @@ export default function Conversation({ mode, config, onExit }) {
     stopListening,
     speak,
     stopSpeaking,
-  } = useVoice((finalTranscript) => {
-    if (finalTranscript) {
-      handleUserTurn(finalTranscript);
+  } = useVoice(({ text, audioUrl }) => {
+    if (text) {
+      handleUserTurn(text, audioUrl);
     } else if (isCallActiveRef.current) {
       startListening();
     }
@@ -66,10 +67,10 @@ export default function Conversation({ mode, config, onExit }) {
     throw new Error(`Unknown mode: ${mode}`);
   }, [mode, config, questionNumber]);
 
-  const handleUserTurn = async (userText) => {
+  const handleUserTurn = async (userText, audioUrl = null) => {
     if (!userText.trim()) return;
     setIsThinking(true);
-    const userMsg = { role: 'user', content: userText };
+    const userMsg = { role: 'user', content: userText, audioUrl };
     const historyForApi = messages.map((m) => ({ role: m.role, content: m.content }));
 
     try {
@@ -224,9 +225,18 @@ export default function Conversation({ mode, config, onExit }) {
           <div key={idx} className={msg.role === 'user' ? 'line line-you' : 'line line-ai'}>
             <div className="line-head">
               <span className="line-role">{msg.role === 'user' ? 'you' : 'partner'}</span>
-              <button className="line-replay" onClick={() => speak(msg.content)} aria-label="Play this line">▸ play</button>
+              {!(msg.role === 'user' && msg.audioUrl) && (
+                <button className="line-replay" onClick={() => speak(msg.content)} aria-label="Play this line">▸ play</button>
+              )}
             </div>
-            <p className="line-text">{msg.content}</p>
+            {msg.role === 'user' && msg.audioUrl ? (
+              <>
+                <VoiceNoteBubble audioUrl={msg.audioUrl} />
+                <p className="line-caption">{msg.content}</p>
+              </>
+            ) : (
+              <p className="line-text">{msg.content}</p>
+            )}
           </div>
         ))}
 
