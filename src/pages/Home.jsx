@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAllSessions, computeStreak } from '../services/historyStore';
 import './Home.css';
 
 const POPULAR_SKILLS = [
@@ -6,8 +7,21 @@ const POPULAR_SKILLS = [
   'API Testing', 'Cucumber/BDD', 'Docker', 'Jenkins', 'Git', 'Spring Boot',
 ];
 
-export default function Home({ onStart }) {
+export default function Home({ onStart, onOpenHistory }) {
   const [customSkill, setCustomSkill] = useState('');
+  const [stats, setStats] = useState({ total: 0, streak: 0 });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const sessions = await getAllSessions();
+        setStats({ total: sessions.length, streak: computeStreak(sessions) });
+      } catch {
+        // History not available yet (first ever use, or unsupported browser) -
+        // stats just stay at zero, nothing to show yet.
+      }
+    })();
+  }, []);
 
   return (
     <div className="home">
@@ -16,6 +30,20 @@ export default function Home({ onStart }) {
         <h1 className="home-title">Speaking Partner</h1>
         <p className="home-sub">Pick a session to start recording.</p>
       </div>
+
+      {stats.total > 0 && (
+        <button className="home-stats" onClick={onOpenHistory}>
+          <span className="home-stat">
+            <span className="home-stat-num">{stats.total}</span>
+            <span className="home-stat-label">sessions</span>
+          </span>
+          <span className="home-stat">
+            <span className="home-stat-num">{stats.streak}</span>
+            <span className="home-stat-label">day streak</span>
+          </span>
+          <span className="home-stats-link">view history →</span>
+        </button>
+      )}
 
       <button className="track-card track-signal" onClick={() => onStart('casual', { topic: 'general daily life', level: 'intermediate' })}>
         <span className="track-tab">A</span>
@@ -63,6 +91,10 @@ export default function Home({ onStart }) {
           start ▸
         </button>
       </div>
+
+      {stats.total === 0 && (
+        <button className="home-history-link" onClick={onOpenHistory}>view practice history</button>
+      )}
     </div>
   );
 }

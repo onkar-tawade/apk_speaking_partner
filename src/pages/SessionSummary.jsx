@@ -6,11 +6,19 @@ import './SessionSummary.css';
  * the conversation, this is where all the feedback actually lands - plus a
  * fluency-level read (patterns, not just individual mistakes).
  */
-export default function SessionSummary({ mode, isLoading, result, allCorrections, onClose, onRetry }) {
+export default function SessionSummary({ mode, isLoading, result, allCorrections, onClose, onRetry, variant = 'overlay', sessionMeta = null }) {
   return (
-    <div className="summary-overlay">
-      <div className="summary-sheet">
-        <p className="summary-eyebrow">session log</p>
+    <div className={variant === 'page' ? 'summary-page' : 'summary-overlay'}>
+      <div className={variant === 'page' ? 'summary-sheet summary-sheet-page' : 'summary-sheet'}>
+        <p className="summary-eyebrow">{variant === 'page' ? 'past session' : 'session log'}</p>
+
+        {sessionMeta?.status === 'partial' && (
+          <div className="summary-partial-note">
+            Ended early — {sessionMeta.questionsAttempted} of {sessionMeta.totalQuestionsPlanned} questions answered.
+            Feedback below only covers what was actually asked.
+          </div>
+        )}
+
 
         {isLoading && <p className="summary-loading">Reviewing the recording…</p>}
 
@@ -103,8 +111,14 @@ export default function SessionSummary({ mode, isLoading, result, allCorrections
         )}
 
         <div className="summary-actions">
-          <button className="summary-btn-primary" onClick={onRetry}>practice again</button>
-          <button className="summary-btn-secondary" onClick={onClose}>back home</button>
+          {variant === 'page' ? (
+            <button className="summary-btn-primary" onClick={onClose}>← back to history</button>
+          ) : (
+            <>
+              <button className="summary-btn-primary" onClick={onRetry}>practice again</button>
+              <button className="summary-btn-secondary" onClick={onClose}>back home</button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,11 +1,24 @@
 .summary-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(30, 42, 35, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 50;
+}
+
+.summary-page {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.summary-sheet-page {
+  max-width: 480px;
+  margin: 0 auto;
+  border-radius: 0;
+  max-height: none;
+  padding-top: 24px;
 }
 
 .summary-sheet {
@@ -25,6 +38,15 @@
   text-transform: uppercase;
   color: var(--mute);
   margin: 0 0 10px;
+}
+
+.summary-partial-note {
+  background: var(--reel-soft);
+  color: var(--reel);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin-bottom: 16px;
 }
 
 .summary-score {

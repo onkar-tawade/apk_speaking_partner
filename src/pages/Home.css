@@ -6,7 +6,60 @@
   margin: 0 auto;
 }
 
-.home-head { margin-bottom: 28px; }
+.home-head { margin-bottom: 20px; }
+
+.home-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.home-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-stat-num {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mute);
+  text-transform: uppercase;
+}
+
+.home-stats-link {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--tape);
+}
+
+.home-history-link {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mute);
+  text-align: center;
+  padding: 16px 0 0;
+  cursor: pointer;
+}
 
 .home-eyebrow {
   font-family: var(--font-mono);

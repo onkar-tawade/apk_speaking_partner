@@ -9,19 +9,21 @@ import {
   buildSessionSummaryPrompt,
   buildHelpMeSayItPrompt,
 } from '../prompts/systemPrompts';
+import { saveSession } from '../services/historyStore';
 import SessionSummary from './SessionSummary';
 import HelpMeSayIt from './HelpMeSayIt';
 import VoiceNoteBubble from './VoiceNoteBubble';
 import './Conversation.css';
 
-export default function Conversation({ mode, config, onExit }) {
+export default function Conversation({ mode, config, onExit, initialMessages = [], initialQuestionNumber = 1, resumingSessionId = null }) {
   const [inputMode, setInputMode] = useState('voice');
   const [typedText, setTypedText] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [questionNumber, setQuestionNumber] = useState(1);
+  const [messages, setMessages] = useState(initialMessages);
+  const [questionNumber, setQuestionNumber] = useState(initialQuestionNumber);
+  const startTimeRef = useRef(Date.now());
 
   // Corrections are collected here as the conversation goes, but NOT rendered
   // live anymore - they only surface in the end-of-session summary, so the
@@ -212,6 +214,55 @@ export default function Conversation({ mode, config, onExit }) {
     handleUserTurn(typedText.trim());
   };
 
+  const buildSessionTitle = () => {
+    if (mode === 'interview') return `${config?.skill || 'Interview'}`;
+    if (mode === 'professional') return `Professional — ${config?.scenario || 'conversation'}`;
+    return 'Casual talk';
+  };
+
+  const saveSessionToHistory = async (result) => {
+    try {
+      const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+      const totalQuestionsPlanned = mode === 'interview' ? (config?.totalQuestions || 8) : null;
+      // questionNumber increments AFTER each answered turn, so this count is how
+      // many questions actually got a response - correct even if the session
+      // ended early.
+      const questionsAttempted = mode === 'interview' ? questionNumber - 1 : null;
+      const status =
+        mode !== 'interview'
+          ? 'completed'
+          : questionsAttempted >= totalQuestionsPlanned
+          ? 'completed'
+          : 'partial';
+
+      await saveSession({
+        id: resumingSessionId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        mode,
+        title: buildSessionTitle(),
+        skill: config?.skill || null,
+        scenario: config?.scenario || config?.topic || null,
+        level: config?.level || null,
+        date: new Date().toISOString(),
+        durationSeconds,
+        status,
+        questionsAttempted,
+        totalQuestionsPlanned,
+        pinned: false,
+        messages,
+        summaryResult: result,
+        correctionsCount: collectedCorrections.length,
+        // Only partial interviews are resumable - casual/professional don't have
+        // a fixed target, so "partial" doesn't apply to them.
+        resumeState: status === 'partial' ? { questionNumber, config } : null,
+      });
+    } catch (err) {
+      // Saving history is a nice-to-have, not core functionality - a failure
+      // here (e.g. IndexedDB unsupported/blocked) should never break the
+      // summary the person is currently looking at.
+      console.error('Failed to save session to history:', err);
+    }
+  };
+
   const handleEndSession = async () => {
     setIsCallActive(false);
     stopListening();
@@ -234,9 +285,11 @@ export default function Conversation({ mode, config, onExit }) {
           : buildSessionSummaryPrompt({ mode, transcriptText });
       const result = await getEvaluationResponse(prompt);
       setSummaryResult(result);
+      await saveSessionToHistory(result);
     } catch (err) {
       console.error(err);
       setSummaryResult(null);
+      await saveSessionToHistory(null);
     } finally {
       setSummaryLoading(false);
     }
