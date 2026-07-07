@@ -75,7 +75,10 @@ export default function Conversation({ mode, config, onExit }) {
 
     try {
       const systemPrompt = buildSystemPrompt();
-      const result = await getSpeakingPartnerResponse(systemPrompt, historyForApi, userText);
+      // Interview mode uses a lower temperature - focused, consistent question
+      // quality matters more here than the natural variety wanted in casual chat.
+      const temperature = mode === 'interview' ? 0.5 : 0.7;
+      const result = await getSpeakingPartnerResponse(systemPrompt, historyForApi, userText, temperature);
 
       const assistantMsg = { role: 'assistant', content: result.reply };
 
@@ -127,6 +130,72 @@ export default function Conversation({ mode, config, onExit }) {
     stopSpeaking();
     setIsSpeaking(false);
   };
+
+  // Keeps the media-session button handler calling the CURRENT handleRecordPress
+  // logic (which depends on isListening/isCallActive) rather than whatever
+  // version was captured when the effect below last ran.
+  const handleRecordPressRef = useRef(handleRecordPress);
+  useEffect(() => {
+    handleRecordPressRef.current = handleRecordPress;
+  });
+
+  // Earphone/headset hardware button support. The browser only routes a
+  // physical media button (the click on a wired earphone's inline remote,
+  // or a Bluetooth button) to the page while there's an active "media
+  // session" - which normally means something is actively playing. A
+  // silent, looping, inaudible track keeps that session alive for the
+  // duration of the call so the hardware button has something to attach to.
+  // This is IN ADDITION to the on-screen tap, not a replacement for it -
+  // if this doesn't work on a given phone/earphone combo, the manual tap
+  // still works exactly as before.
+  useEffect(() => {
+    if (!isCallActive) return undefined;
+    if (typeof window === 'undefined' || !('AudioContext' in window || 'webkitAudioContext' in window)) {
+      return undefined;
+    }
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0; // silent - this track exists only to keep a media session alive
+    oscillator.connect(gain);
+    const destination = ctx.createMediaStreamDestination();
+    gain.connect(destination);
+    oscillator.start();
+
+    const silentAudio = new Audio();
+    silentAudio.srcObject = destination.stream;
+    silentAudio.loop = true;
+    silentAudio.play().catch(() => {
+      // Autoplay can be blocked in some contexts - if so, the earphone button
+      // simply won't work this session, but the on-screen tap is unaffected.
+    });
+
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Speaking Partner - live session',
+          artist: mode,
+        });
+      } catch {
+        // Non-fatal if MediaMetadata isn't supported.
+      }
+      navigator.mediaSession.setActionHandler('play', () => handleRecordPressRef.current());
+      navigator.mediaSession.setActionHandler('pause', () => handleRecordPressRef.current());
+    }
+
+    return () => {
+      oscillator.stop();
+      ctx.close();
+      silentAudio.pause();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCallActive]);
 
   const handleModeSwitch = (next) => {
     if (next === 'text' && isCallActive) {

@@ -12,7 +12,7 @@ function getApiKey() {
   return key;
 }
 
-export async function getSpeakingPartnerResponse(systemPrompt, history, userMessage) {
+export async function getSpeakingPartnerResponse(systemPrompt, history, userMessage, temperature = 0.7) {
   const messages = [
     { role: 'system', content: systemPrompt },
     ...history,
@@ -27,7 +27,7 @@ export async function getSpeakingPartnerResponse(systemPrompt, history, userMess
     },
     body: JSON.stringify({
       model: MODEL,
-      temperature: 0.7,
+      temperature,
       max_tokens: 700,
       messages,
       response_format: { type: 'json_object' },

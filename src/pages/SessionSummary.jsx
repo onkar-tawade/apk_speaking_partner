@@ -35,17 +35,25 @@ export default function SessionSummary({ mode, isLoading, result, allCorrections
                   </div>
                 )}
 
-                {result.weakestQuestion && (
-                  <div className="summary-block summary-model">
-                    <p className="summary-block-title">Toughest question</p>
-                    <p className="summary-quote">{result.weakestQuestion}</p>
-                    <p className="summary-block-title">A strong answer would sound like</p>
-                    <p className="summary-model-answer">{result.modelAnswer}</p>
-                  </div>
-                )}
-
                 {result.communicationNotes && (
                   <p className="summary-note">{result.communicationNotes}</p>
+                )}
+
+                {result.questionBreakdown?.length > 0 && (
+                  <div className="summary-block">
+                    <p className="summary-block-title">Question by question - how to land it</p>
+                    {result.questionBreakdown.map((qa, i) => (
+                      <div key={i} className="summary-qa">
+                        <p className="summary-qa-question">Q{i + 1}. {qa.question}</p>
+                        {qa.yourAnswerSummary && (
+                          <p className="summary-qa-yours">You said: {qa.yourAnswerSummary}</p>
+                        )}
+                        <p className="summary-qa-model-label">Impressive way to answer</p>
+                        <p className="summary-model-answer">{qa.modelAnswer}</p>
+                        {qa.whyItWorks && <p className="summary-qa-why">{qa.whyItWorks}</p>}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </>
             ) : (
