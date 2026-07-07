@@ -7,22 +7,21 @@ import {
   speakNative,
   stopNativeSpeaking,
 } from '../services/nativeVoice';
-import { transcribeAudio } from '../services/groqService';
 
-// Web path only. No automatic silence/pause detection anymore - that was tried
-// (fixed threshold, then adaptive calibration) and kept producing unreliable
-// results (cutting recordings short, near-empty clips, wrong transcriptions)
-// that couldn't be verified or debugged without a real device in hand. This is
-// now purely manual: tap starts recording, tap again stops it, and EXACTLY that
-// raw clip - untouched, unanalyzed - gets sent to Whisper. Simpler and easier to
-// reason about: if this is still wrong, it's not our stop-timing logic at fault.
-const MAX_RECORDING_MS = 60000; // hard safety cap only, not a "guess when done" mechanism
+// Web path uses the browser's own live speech recognition - zero-tap, natural
+// conversation flow, at the cost of accuracy versus the batch Whisper approach
+// tried earlier (which was more accurate in principle but required a manual tap
+// per turn and had its own recurring audio-quality problems that couldn't be
+// verified without a real device). This restores the natural flow; if accuracy
+// becomes the priority again later, the Whisper path is a known alternative.
+const SILENCE_TIMEOUT_MS = 3000;
 
 /**
  * Voice input/output for the app.
  * - Native (installed Capacitor app): Android's own speech recognizer + TTS.
- * - Web (browser testing): records actual audio between two taps and sends it to
- *   Groq's Whisper endpoint for transcription.
+ * - Web (browser testing/use): the browser's live Web Speech API - continuous,
+ *   zero-tap after the call starts, using the recognizer's own result timing
+ *   (not raw audio volume) to decide when you've paused.
  *
  * The interface is identical either way, so screens don't need to know which
  * path is active.
@@ -31,7 +30,6 @@ export function useVoice(onFinalTranscript) {
   const native = isNativePlatform();
 
   const [isListening, setIsListening] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const onFinalTranscriptRef = useRef(onFinalTranscript);
 
@@ -67,111 +65,78 @@ export function useVoice(onFinalTranscript) {
   const speakNativeFn = useCallback((text, opts) => speakNative(text, opts), []);
   const stopSpeakingNativeFn = useCallback(() => stopNativeSpeaking(), []);
 
-  // ---------------- WEB PATH (manual record -> Groq Whisper) ----------------
-  const mediaStreamRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const maxTimerRef = useRef(null);
+  // ---------------- WEB PATH (live browser speech recognition) ----------------
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef('');
+  const silenceTimerRef = useRef(null);
 
-  const isWebSttSupported =
-    !native && typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices) && typeof window.MediaRecorder !== 'undefined';
-  const isWebTtsSupported = !native && typeof window !== 'undefined' && 'speechSynthesis' in window;
-
-  const cleanupWebRecording = () => {
-    if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
-    maxTimerRef.current = null;
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-    mediaStreamRef.current = null;
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
   };
 
-  const handleRecordingStopped = useCallback(async () => {
-    const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-    audioChunksRef.current = [];
-    setIsListening(false);
-    cleanupWebRecording();
+  const SpeechRecognitionCtor =
+    !native && typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  const isWebSttSupported = Boolean(SpeechRecognitionCtor);
+  const isWebTtsSupported = !native && typeof window !== 'undefined' && 'speechSynthesis' in window;
 
-    // Genuinely no audio at all (tapped start then immediately stop).
-    if (blob.size < 2000) {
-      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: '', audioUrl: null });
-      return;
-    }
+  useEffect(() => {
+    if (native || !isWebSttSupported) return;
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = true;
+    recognition.continuous = true;
 
-    // Kept so the actual recording can be played back in the chat (real waveform,
-    // real audio) instead of only showing the transcribed text - also doubles as
-    // a way to verify exactly what was captured versus what came back as text.
-    const audioUrl = URL.createObjectURL(blob);
+    recognition.onresult = (event) => {
+      const text = Array.from(event.results).map((r) => r[0].transcript).join(' ');
+      transcriptRef.current = text;
+      setTranscript(text);
+      // Every new bit of recognized speech pushes back the "are they done?"
+      // decision - this is the recognizer's own result timing, not raw audio
+      // volume, which is what made the earlier custom silence-detection attempt
+      // unreliable.
+      clearSilenceTimer();
+      silenceTimerRef.current = setTimeout(() => recognitionRef.current?.stop(), SILENCE_TIMEOUT_MS);
+    };
 
-    setIsTranscribing(true);
-    try {
-      const text = await transcribeAudio(blob);
-      setIsTranscribing(false);
-      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text, audioUrl });
-    } catch (err) {
-      console.error('Transcription failed:', err);
-      setIsTranscribing(false);
-      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: '', audioUrl });
-    }
-  }, []);
-
-  const startListeningWeb = useCallback(async () => {
-    if (!isWebSttSupported) return;
-    try {
-      // After three rounds of custom audio processing (filters, gain, compression)
-      // that either didn't help or made things worse, this now records the raw
-      // stream exactly as the browser delivers it - relying on Chrome's own
-      // mature, widely-used AGC/echo-cancellation/noise-suppression instead of an
-      // untested custom DSP chain that was itself a plausible source of the
-      // distortion being reported.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          autoGainControl: true,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
-      mediaStreamRef.current = stream;
-      audioChunksRef.current = [];
-      setTranscript('');
-
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm',
-        audioBitsPerSecond: 128000,
-      });
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      recorder.onstop = handleRecordingStopped;
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-
-      setIsListening(true);
-      // Safety net only, in case someone forgets to tap stop - not meant to be hit
-      // in normal use.
-      maxTimerRef.current = setTimeout(() => stopListeningWebRef.current(), MAX_RECORDING_MS);
-    } catch (err) {
-      console.error('Microphone access failed:', err);
+    recognition.onend = () => {
+      clearSilenceTimer();
       setIsListening(false);
-    }
-  }, [isWebSttSupported, handleRecordingStopped]);
+      const finalText = transcriptRef.current.trim();
+      transcriptRef.current = '';
+      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: finalText, audioUrl: null });
+    };
+
+    recognition.onerror = (event) => {
+      clearSilenceTimer();
+      setIsListening(false);
+      transcriptRef.current = '';
+      if (event.error === 'no-speech' && onFinalTranscriptRef.current) {
+        onFinalTranscriptRef.current({ text: '', audioUrl: null });
+      }
+    };
+
+    recognitionRef.current = recognition;
+    return () => {
+      clearSilenceTimer();
+      recognition.stop();
+    };
+  }, [native, isWebSttSupported]);
+
+  const startListeningWeb = useCallback(() => {
+    if (!recognitionRef.current) return;
+    clearSilenceTimer();
+    transcriptRef.current = '';
+    setTranscript('');
+    setIsListening(true);
+    recognitionRef.current.start();
+  }, []);
 
   const stopListeningWeb = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop(); // triggers handleRecordingStopped via onstop
-    } else {
-      cleanupWebRecording();
-      setIsListening(false);
-    }
-  }, []);
-
-  const stopListeningWebRef = useRef(stopListeningWeb);
-  useEffect(() => {
-    stopListeningWebRef.current = stopListeningWeb;
-  }, [stopListeningWeb]);
-
-  useEffect(() => {
-    return () => cleanupWebRecording();
+    clearSilenceTimer();
+    recognitionRef.current?.stop();
   }, []);
 
   const speakWeb = useCallback((text, { onDone } = {}) => {
@@ -209,7 +174,7 @@ export function useVoice(onFinalTranscript) {
     isSttSupported: isWebSttSupported,
     isTtsSupported: isWebTtsSupported,
     isListening,
-    isTranscribing,
+    isTranscribing: false,
     transcript,
     setTranscript,
     startListening: startListeningWeb,
