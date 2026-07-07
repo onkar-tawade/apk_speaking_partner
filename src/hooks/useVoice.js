@@ -67,15 +67,8 @@ export function useVoice(onFinalTranscript) {
 
   // ---------------- WEB PATH (live browser speech recognition) ----------------
   const recognitionRef = useRef(null);
-  const transcriptRef = useRef('');
-  const silenceTimerRef = useRef(null);
-
-  const clearSilenceTimer = () => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-  };
+  const accumulatedFinalRef = useRef('');
+  const isManualStopRef = useRef(false);
 
   const SpeechRecognitionCtor =
     !native && typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -87,55 +80,77 @@ export function useVoice(onFinalTranscript) {
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = 'en-IN';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    // continuous=true has a well-documented bug on Android Chrome where it
+    // re-echoes earlier words into new results instead of cleanly separating
+    // "already heard" from "hearing now" - that's what was producing repeated
+    // phrases like "so I am not so I am not so I am not...". Using single-shot
+    // mode and restarting it ourselves on every natural pause avoids that buggy
+    // mode entirely, while still feeling continuous to the person talking.
+    recognition.continuous = false;
 
     recognition.onresult = (event) => {
-      const text = Array.from(event.results).map((r) => r[0].transcript).join(' ');
-      transcriptRef.current = text;
-      setTranscript(text);
-      // Every new bit of recognized speech pushes back the "are they done?"
-      // decision - this is the recognizer's own result timing, not raw audio
-      // volume, which is what made the earlier custom silence-detection attempt
-      // unreliable.
-      clearSilenceTimer();
-      silenceTimerRef.current = setTimeout(() => recognitionRef.current?.stop(), SILENCE_TIMEOUT_MS);
+      const last = event.results[event.results.length - 1];
+      const text = last[0].transcript;
+      if (last.isFinal) {
+        accumulatedFinalRef.current = (accumulatedFinalRef.current + ' ' + text).trim();
+        setTranscript(accumulatedFinalRef.current);
+      } else {
+        setTranscript((accumulatedFinalRef.current + ' ' + text).trim());
+      }
     };
 
     recognition.onend = () => {
-      clearSilenceTimer();
-      setIsListening(false);
-      const finalText = transcriptRef.current.trim();
-      transcriptRef.current = '';
-      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: finalText, audioUrl: null });
+      if (isManualStopRef.current) {
+        // The person tapped stop - this turn is actually over, submit it.
+        isManualStopRef.current = false;
+        setIsListening(false);
+        const finalText = accumulatedFinalRef.current.trim();
+        accumulatedFinalRef.current = '';
+        if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: finalText, audioUrl: null });
+      } else {
+        // Ended on its own (a natural pause) - restart invisibly so it keeps
+        // capturing the rest of what they're saying, without ever needing
+        // continuous mode.
+        try {
+          recognition.start();
+        } catch {
+          setIsListening(false);
+          const finalText = accumulatedFinalRef.current.trim();
+          accumulatedFinalRef.current = '';
+          if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: finalText, audioUrl: null });
+        }
+      }
     };
 
     recognition.onerror = (event) => {
-      clearSilenceTimer();
-      setIsListening(false);
-      transcriptRef.current = '';
-      if (event.error === 'no-speech' && onFinalTranscriptRef.current) {
-        onFinalTranscriptRef.current({ text: '', audioUrl: null });
+      if (event.error === 'no-speech') {
+        // Nothing heard in this chunk yet - not a real error, keep going.
+        return;
       }
+      isManualStopRef.current = false;
+      setIsListening(false);
+      accumulatedFinalRef.current = '';
+      if (onFinalTranscriptRef.current) onFinalTranscriptRef.current({ text: '', audioUrl: null });
     };
 
     recognitionRef.current = recognition;
     return () => {
-      clearSilenceTimer();
+      isManualStopRef.current = true;
       recognition.stop();
     };
   }, [native, isWebSttSupported]);
 
   const startListeningWeb = useCallback(() => {
     if (!recognitionRef.current) return;
-    clearSilenceTimer();
-    transcriptRef.current = '';
+    accumulatedFinalRef.current = '';
+    isManualStopRef.current = false;
     setTranscript('');
     setIsListening(true);
     recognitionRef.current.start();
   }, []);
 
   const stopListeningWeb = useCallback(() => {
-    clearSilenceTimer();
+    isManualStopRef.current = true;
     recognitionRef.current?.stop();
   }, []);
 
