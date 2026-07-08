@@ -8,6 +8,18 @@
 
 .home-head { margin-bottom: 20px; }
 
+.home-profile-link-temp {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--mute);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
 .home-stats {
   display: flex;
   align-items: center;

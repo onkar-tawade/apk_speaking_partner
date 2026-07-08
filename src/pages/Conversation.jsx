@@ -10,12 +10,13 @@ import {
   buildHelpMeSayItPrompt,
 } from '../prompts/systemPrompts';
 import { saveSession } from '../services/historyStore';
+import { getActiveProfileId } from '../services/profileStore';
 import SessionSummary from './SessionSummary';
 import HelpMeSayIt from './HelpMeSayIt';
 import VoiceNoteBubble from './VoiceNoteBubble';
 import './Conversation.css';
 
-export default function Conversation({ mode, config, onExit, initialMessages = [], initialQuestionNumber = 1, resumingSessionId = null }) {
+export default function Conversation({ mode, config, onExit, initialMessages = [], initialQuestionNumber = 1, resumingSessionId = null, sessionProfileId = null }) {
   const [inputMode, setInputMode] = useState('voice');
   const [typedText, setTypedText] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -245,6 +246,7 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
       await saveSession({
         id: resumingSessionId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         mode,
+        profileId: resumingSessionId ? (sessionProfileId || getActiveProfileId()) : getActiveProfileId(),
         title: buildSessionTitle(),
         skill: config?.skill || null,
         scenario: config?.scenario || config?.topic || null,

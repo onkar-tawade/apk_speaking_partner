@@ -152,6 +152,15 @@
   padding: 1px 8px;
 }
 
+.history-card-profile-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--tape);
+  border: 1px solid var(--tape);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
 .history-card-meta {
   font-size: 11px;
   color: var(--mute);

@@ -1,0 +1,116 @@
+.ps-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+}
+
+.ps-sheet {
+  background: var(--paper);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 18px 18px 0 0;
+  padding: 18px 18px 26px;
+}
+
+.ps-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ps-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin: 0;
+}
+
+.ps-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--mute);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ps-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ps-row.active {
+  background: var(--paper-raised);
+}
+
+.ps-dot {
+  color: var(--tape);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ps-row-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-role {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.ps-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--mute);
+}
+
+.ps-edit {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--tape);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ps-delete {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mute);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ps-delete.confirm {
+  color: var(--signal);
+}
+
+.ps-create {
+  width: 100%;
+  font-family: var(--font-mono);
+  background: none;
+  border: 1px dashed var(--paper-line);
+  color: var(--tape);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 10px;
+}

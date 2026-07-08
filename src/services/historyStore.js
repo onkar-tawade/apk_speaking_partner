@@ -76,6 +76,40 @@ export async function updateSessionFields(id, fields) {
   });
 }
 
+export async function getSessionsByProfile(profileId) {
+  const all = await getAllSessions();
+  return all.filter((s) => s.profileId === profileId);
+}
+
+/**
+ * One-time migration path: existing sessions from before Preparation Profiles
+ * existed have no profileId at all. Called once, right after auto-creating the
+ * "Default" profile for a legacy user, so their existing history becomes
+ * genuinely tagged instead of floating with no profile - this is what makes
+ * profile-based filtering actually correct for returning users.
+ */
+export async function tagUntaggedSessionsWithProfile(profileId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.openCursor();
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const session = cursor.value;
+        if (!session.profileId) {
+          session.profileId = profileId;
+          cursor.update(session);
+        }
+        cursor.continue();
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function deleteSession(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {

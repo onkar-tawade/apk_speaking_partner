@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllSessions, deleteSession, updateSessionFields, getStorageEstimate } from '../services/historyStore';
+import { getAllProfiles, getActiveProfileId } from '../services/profileStore';
 import './History.css';
 
 const MODE_LABELS = { casual: 'Casual', professional: 'Professional', interview: 'Interview' };
@@ -14,11 +15,20 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
   const [storageInfo, setStorageInfo] = useState(null);
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  // Defaults to showing only the active profile's sessions - this is what makes
+  // "each profile keeps separate history" an actual visible behavior, not just
+  // a hidden data field nobody can see the effect of.
+  const [profileScope, setProfileScope] = useState('mine');
+  const [profileNames, setProfileNames] = useState({});
+  const activeProfileId = getActiveProfileId();
 
   const loadSessions = async () => {
     try {
-      const all = await getAllSessions();
+      const [all, profiles] = await Promise.all([getAllSessions(), getAllProfiles()]);
       setSessions(all);
+      const names = {};
+      profiles.forEach((p) => { names[p.id] = p.targetRole; });
+      setProfileNames(names);
     } catch (err) {
       console.error('Failed to load history:', err);
     } finally {
@@ -58,6 +68,7 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
 
   const filtered = useMemo(() => {
     let list = sessions;
+    if (profileScope === 'mine') list = list.filter((s) => s.profileId === activeProfileId);
     if (modeFilter !== 'all') list = list.filter((s) => s.mode === modeFilter);
     if (statusFilter !== 'all') list = list.filter((s) => (s.status || 'completed') === statusFilter);
     if (searchText.trim()) {
@@ -77,7 +88,7 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
 
     // Pinned sessions always float to the top, regardless of sort choice.
     return [...sorted.filter((s) => s.pinned), ...sorted.filter((s) => !s.pinned)];
-  }, [sessions, modeFilter, statusFilter, sortBy, searchText]);
+  }, [sessions, profileScope, activeProfileId, modeFilter, statusFilter, sortBy, searchText]);
 
   const formatDate = (iso) => {
     const d = new Date(iso);
@@ -112,6 +123,21 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
       />
+
+      <div className="history-controls-row">
+        <button
+          className={profileScope === 'mine' ? 'hf-chip active' : 'hf-chip'}
+          onClick={() => setProfileScope('mine')}
+        >
+          This profile
+        </button>
+        <button
+          className={profileScope === 'all' ? 'hf-chip active' : 'hf-chip'}
+          onClick={() => setProfileScope('all')}
+        >
+          All profiles
+        </button>
+      </div>
 
       <div className="history-filters">
         {['all', 'casual', 'professional', 'interview'].map((f) => (
@@ -150,6 +176,9 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
             <div key={session.id} className="history-card" onClick={() => onOpenSession(session)}>
               <div className="history-card-top">
                 <span className="history-card-mode">{MODE_LABELS[session.mode] || session.mode}</span>
+                {profileScope === 'all' && session.profileId && profileNames[session.profileId] && (
+                  <span className="history-card-profile-tag">{profileNames[session.profileId]}</span>
+                )}
                 {isPartial && <span className="history-card-status">partial</span>}
                 {score !== null && <span className="history-card-score">{score}/10</span>}
               </div>

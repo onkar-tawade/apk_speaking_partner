@@ -7,7 +7,7 @@ const POPULAR_SKILLS = [
   'API Testing', 'Cucumber/BDD', 'Docker', 'Jenkins', 'Git', 'Spring Boot',
 ];
 
-export default function Home({ onStart, onOpenHistory }) {
+export default function Home({ onStart, onOpenHistory, onOpenProfileSwitcher }) {
   const [customSkill, setCustomSkill] = useState('');
   const [stats, setStats] = useState({ total: 0, streak: 0 });
 
@@ -27,6 +27,9 @@ export default function Home({ onStart, onOpenHistory }) {
     <div className="home">
       <div className="home-head">
         <p className="home-eyebrow">practice log</p>
+        {onOpenProfileSwitcher && (
+          <button className="home-profile-link-temp" onClick={onOpenProfileSwitcher}>switch profile</button>
+        )}
         <h1 className="home-title">Speaking Partner</h1>
         <p className="home-sub">Pick a session to start recording.</p>
       </div>
