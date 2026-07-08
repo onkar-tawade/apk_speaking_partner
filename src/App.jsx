@@ -59,6 +59,19 @@ export default function App() {
     return null;
   }
 
+  const goToResumedSession = (session) =>
+    setScreen({
+      name: 'conversation',
+      mode: 'interview',
+      config: session.resumeState.config,
+      initialMessages: session.messages,
+      initialQuestionNumber: session.resumeState.questionNumber,
+      resumingSessionId: session.id,
+      sessionProfileId: session.profileId || null,
+    });
+
+  const goToSessionDetail = (session) => setScreen({ name: 'historyDetail', session });
+
   if (screen.name === 'profileCreate') {
     return (
       <ProfileCreate
@@ -74,18 +87,8 @@ export default function App() {
     return (
       <History
         onBack={() => setScreen({ name: 'home' })}
-        onOpenSession={(session) => setScreen({ name: 'historyDetail', session })}
-        onResumeSession={(session) =>
-          setScreen({
-            name: 'conversation',
-            mode: 'interview',
-            config: session.resumeState.config,
-            initialMessages: session.messages,
-            initialQuestionNumber: session.resumeState.questionNumber,
-            resumingSessionId: session.id,
-            sessionProfileId: session.profileId || null,
-          })
-        }
+        onOpenSession={goToSessionDetail}
+        onResumeSession={goToResumedSession}
         onRestartSession={(session) =>
           setScreen({
             name: 'conversation',
@@ -154,10 +157,9 @@ export default function App() {
           }
         }}
         onOpenHistory={() => setScreen({ name: 'history' })}
-        // Temporary test entry point for this module only - real placement in
-        // the Home redesign (next module) will replace this with the proper
-        // profile-name-plus-switcher affordance from the design doc.
         onOpenProfileSwitcher={() => setShowSwitcher(true)}
+        onResumeSession={goToResumedSession}
+        onOpenSession={goToSessionDetail}
       />
       {showSwitcher && (
         <ProfileSwitcher
