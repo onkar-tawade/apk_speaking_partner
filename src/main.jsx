@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
+import { applyPersistedSettings } from './services/settingsStore';
 import './index.css';
+
+applyPersistedSettings();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

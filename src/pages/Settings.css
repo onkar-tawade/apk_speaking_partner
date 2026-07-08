@@ -1,0 +1,85 @@
+.settings {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 20px 20px 60px;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.settings-back {
+  background: none;
+  border: none;
+  color: var(--tape);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.settings-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0 0 24px;
+}
+
+.settings-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--tape);
+  margin: 22px 0 10px;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-chip {
+  font-family: var(--font-mono);
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  color: var(--ink-soft);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.settings-chip.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.settings-file-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-slider {
+  width: 100%;
+}
+
+.settings-select {
+  width: 100%;
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--mute);
+  margin: 6px 0 0;
+}

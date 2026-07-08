@@ -173,7 +173,11 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
           const duration = formatDuration(session.durationSeconds);
 
           return (
-            <div key={session.id} className="history-card" onClick={() => onOpenSession(session)}>
+            <div
+              key={session.id}
+              className={`history-card ${session.status === 'partial' ? 'stripe-partial' : 'stripe-completed'}`}
+              onClick={() => onOpenSession(session)}
+            >
               <div className="history-card-top">
                 <span className="history-card-mode">{MODE_LABELS[session.mode] || session.mode}</span>
                 {profileScope === 'all' && session.profileId && profileNames[session.profileId] && (
@@ -205,6 +209,14 @@ export default function History({ onBack, onOpenSession, onResumeSession, onRest
                 {duration && ` · ${duration}`}
                 {isPartial && ` · ${session.questionsAttempted}/${session.totalQuestionsPlanned} questions`}
               </div>
+
+              {session.summaryResult?.categoryScores && (
+                <div className="history-mini-bars">
+                  {Object.values(session.summaryResult.categoryScores).map((val, i) => (
+                    <span key={i} className="history-mini-bar" style={{ height: `${(val / 10) * 100}%` }} />
+                  ))}
+                </div>
+              )}
 
               <div className="history-card-actions">
                 {isPartial && (

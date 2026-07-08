@@ -25,6 +25,9 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
   const [messages, setMessages] = useState(initialMessages);
   const [questionNumber, setQuestionNumber] = useState(initialQuestionNumber);
   const [priorAssessment, setPriorAssessment] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [confidenceLevel, setConfidenceLevel] = useState(null);
   const startTimeRef = useRef(Date.now());
 
   // Corrections are collected here as the conversation goes, but NOT rendered
@@ -39,11 +42,20 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
   const [showHelpPanel, setShowHelpPanel] = useState(false);
   const [helpLoading, setHelpLoading] = useState(false);
   const [helpResult, setHelpResult] = useState(null);
+  const [liveSessionMeta, setLiveSessionMeta] = useState(null);
 
   const isCallActiveRef = useRef(false);
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
   }, [isCallActive]);
+
+  // Visible elapsed-time counter - separate from startTimeRef, which tracks
+  // total session duration for the saved history record and is untouched.
+  useEffect(() => {
+    if (!isCallActive || isPaused) return undefined;
+    const interval = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isCallActive, isPaused]);
 
   const {
     isSttSupported,
@@ -97,6 +109,9 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
       if (mode === 'interview' && result.runningAssessment) {
         setPriorAssessment(result.runningAssessment);
       }
+      if (result.meta?.confidenceLevel) {
+        setConfidenceLevel(result.meta.confidenceLevel);
+      }
       setIsThinking(false);
       setIsSpeaking(true);
       speak(result.reply, {
@@ -121,6 +136,7 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
   };
 
   const handleRecordPress = () => {
+    if (isPaused) return;
     if (!isCallActive) {
       setIsCallActive(true);
       startListening();
@@ -207,6 +223,26 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCallActive]);
 
+  const handlePauseToggle = () => {
+    if (!isPaused) {
+      stopListening();
+      stopSpeaking();
+      setIsSpeaking(false);
+      setIsPaused(true);
+    } else {
+      setIsPaused(false);
+    }
+  };
+
+  // Reuses the exact same handleUserTurn path as a normal answer - the AI
+  // treats a skip as a very weak/empty response and moves on naturally via
+  // the adaptive rule already built into the interview prompt, so no new
+  // branching logic is needed in the core turn-handling flow.
+  const handleSkip = () => {
+    if (isThinking || isSpeaking) return;
+    handleUserTurn('(the candidate chose to skip this question)');
+  };
+
   const handleModeSwitch = (next) => {
     if (next === 'text' && isCallActive) {
       setIsCallActive(false);
@@ -242,6 +278,12 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
           : questionsAttempted >= totalQuestionsPlanned
           ? 'completed'
           : 'partial';
+
+      // Same values going into the saved record below, also kept in state so
+      // the results screen shown immediately after finishing can display the
+      // same "ended early" detail that History shows when reopened later -
+      // previously this only appeared when reopening from History, not here.
+      setLiveSessionMeta({ status, questionsAttempted, totalQuestionsPlanned });
 
       await saveSession({
         id: resumingSessionId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -335,13 +377,43 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
     ? 'partner speaking — tap to end call'
     : 'tap to end call';
 
+  const formatElapsed = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
+
   return (
     <div className="conv">
       <div className="conv-header">
         <button className="back-btn" onClick={onExit}>← back</button>
         <span className="conv-mode-label">{mode}{config?.skill ? ` · ${config.skill}` : ''}</span>
+        {isCallActive && <span className="conv-timer">⏱ {formatElapsed(elapsedSeconds)}</span>}
         <button className="end-btn" onClick={handleEndSession} disabled={messages.length === 0}>end session</button>
       </div>
+
+      {mode === 'interview' && config?.totalQuestions && isCallActive && (
+        <div className="conv-progress-row">
+          <div className="conv-progress-track">
+            <div
+              className="conv-progress-fill"
+              style={{ width: `${Math.min((questionNumber - 1) / config.totalQuestions, 1) * 100}%` }}
+            />
+          </div>
+          <span className="conv-progress-label">Q{Math.min(questionNumber, config.totalQuestions)}/{config.totalQuestions}</span>
+        </div>
+      )}
+
+      {isCallActive && (
+        <div className="conv-avatar-row">
+          <div className={`conv-avatar ${isSpeaking ? 'is-speaking' : ''}`} aria-hidden="true" />
+          {confidenceLevel && (
+            <span className={`conv-confidence conv-confidence-${confidenceLevel}`}>
+              confidence: {confidenceLevel}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="conv-page">
         {messages.length === 0 && (
@@ -388,15 +460,28 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
 
         {inputMode === 'voice' && isSttSupported ? (
           <div className="record-area">
+            {isCallActive && (
+              <div className="record-extra-controls">
+                <button className="pause-btn" onClick={handlePauseToggle}>
+                  {isPaused ? '▸ resume' : '⏸ pause'}
+                </button>
+                {mode === 'interview' && (
+                  <button className="skip-btn" onClick={handleSkip} disabled={isPaused || isThinking || isSpeaking}>
+                    ⏭ skip
+                  </button>
+                )}
+              </div>
+            )}
             {transcript && <div className="live-transcript">{transcript}</div>}
             <button
               className={`record-btn ${isCallActive ? 'is-live' : ''}`}
               onClick={handleRecordPress}
+              disabled={isPaused}
               aria-label={isCallActive ? 'End conversation' : 'Start conversation'}
             >
               <span className="record-dot" />
             </button>
-            <span className="record-label">{recordStatusLabel}</span>
+            <span className="record-label">{isPaused ? 'paused — tap resume to continue' : recordStatusLabel}</span>
             {isListening && (
               <div className="waveform" aria-hidden="true">
                 {Array.from({ length: 9 }).map((_, i) => (
@@ -439,6 +524,7 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
           isLoading={summaryLoading}
           result={summaryResult}
           allCorrections={collectedCorrections}
+          sessionMeta={liveSessionMeta}
           onRetry={() => {
             setShowSummary(false);
             setMessages([]);

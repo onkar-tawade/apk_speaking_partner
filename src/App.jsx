@@ -6,6 +6,8 @@ import History from './pages/History';
 import SessionSummary from './pages/SessionSummary';
 import ProfileCreate from './pages/ProfileCreate';
 import ProfileSwitcher from './pages/ProfileSwitcher';
+import Coach from './pages/Coach';
+import Settings from './pages/Settings';
 import { getAllProfiles, createProfile, setActiveProfileId } from './services/profileStore';
 import { getAllSessions, tagUntaggedSessionsWithProfile } from './services/historyStore';
 
@@ -79,6 +81,25 @@ export default function App() {
         editingProfile={screen.editingProfile || null}
         onCreated={() => setScreen({ name: 'home' })}
         onCancel={() => setScreen({ name: 'home' })}
+      />
+    );
+  }
+
+  if (screen.name === 'settings') {
+    return <Settings onBack={() => setScreen({ name: 'home' })} />;
+  }
+
+  if (screen.name === 'coach') {
+    return (
+      <Coach
+        onBack={() => setScreen({ name: 'home' })}
+        onStart={(mode, config) => {
+          if (mode === 'interview') {
+            setScreen({ name: 'interviewSetup', skill: config.skill });
+          } else {
+            setScreen({ name: 'conversation', mode, config });
+          }
+        }}
       />
     );
   }
@@ -160,6 +181,8 @@ export default function App() {
         onOpenProfileSwitcher={() => setShowSwitcher(true)}
         onResumeSession={goToResumedSession}
         onOpenSession={goToSessionDetail}
+        onOpenCoach={() => setScreen({ name: 'coach' })}
+        onOpenSettings={() => setScreen({ name: 'settings' })}
       />
       {showSwitcher && (
         <ProfileSwitcher

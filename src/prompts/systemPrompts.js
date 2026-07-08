@@ -110,6 +110,7 @@ export function buildInterviewPrompt({
   level = 'fresher',
   experienceYears = null,
   jobDescription = null,
+  interviewStyle = null,
   questionNumber = 1,
   totalQuestions = 8,
   previousQuestions = [],
@@ -130,6 +131,15 @@ export function buildInterviewPrompt({
 
   const jdBlock = jobDescription && jobDescription.trim()
     ? `The candidate pasted this actual job description they're preparing for - prioritize questions reflecting what THIS specific JD emphasizes:\n"""\n${jobDescription.trim().slice(0, 3000)}\n"""`
+    : '';
+
+  const STYLE_GUIDANCE = {
+    'Product-Based': 'Lean toward depth, system design thinking, and "why" over "what" - the style used by product companies.',
+    'Service-Based': 'Lean toward practical, project-delivery-focused questions - client-facing scenarios, meeting deadlines, working across teams.',
+    Startup: 'Lean toward pragmatism and ownership - less textbook-perfect, more "what would you actually do with limited time/resources."',
+  };
+  const styleBlock = interviewStyle && STYLE_GUIDANCE[interviewStyle]
+    ? `Interview style: ${interviewStyle}. ${STYLE_GUIDANCE[interviewStyle]}`
     : '';
 
   const stage = getDifficultyStage(questionNumber, totalQuestions);
@@ -157,6 +167,7 @@ ${role ? `Role context: candidate is interviewing for a ${role} position.` : ''}
 Candidate level: ${level}
 ${experienceLine}
 ${jdBlock}
+${styleBlock}
 
 === MEMORY: QUESTIONS ALREADY ASKED THIS SESSION ===
 ${memoryBlock}

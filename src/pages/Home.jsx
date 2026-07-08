@@ -14,7 +14,7 @@ function formatMinutes(seconds) {
   return Math.round(seconds / 60);
 }
 
-export default function Home({ onStart, onOpenHistory, onOpenProfileSwitcher, onResumeSession, onOpenSession }) {
+export default function Home({ onStart, onOpenHistory, onOpenProfileSwitcher, onResumeSession, onOpenSession, onOpenCoach, onOpenSettings }) {
   const [customSkill, setCustomSkill] = useState('');
   const [profile, setProfile] = useState(null);
   const [insights, setInsights] = useState(null);
@@ -178,7 +178,9 @@ export default function Home({ onStart, onOpenHistory, onOpenProfileSwitcher, on
 
       <p className="home-motivation">"{motivationalLine}"</p>
 
+      <button className="home-history-link" onClick={onOpenCoach}>view your coach</button>
       <button className="home-history-link" onClick={onOpenHistory}>view practice history</button>
+      <button className="home-history-link" onClick={onOpenSettings}>settings</button>
     </div>
   );
 }

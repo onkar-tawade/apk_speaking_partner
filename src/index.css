@@ -19,6 +19,33 @@
   --font-mono: 'IBM Plex Mono', monospace;
 }
 
+/* Light theme - activated by setting data-theme="light" on <html>, toggled from
+   Settings. Same accent hues, just remapped for a light background so the
+   brand identity carries over instead of two unrelated palettes. */
+:root[data-theme='light'] {
+  --ink: #1E2A23;
+  --ink-soft: #3A4640;
+  --paper: #EFEFE6;
+  --paper-raised: #F8F7F0;
+  --paper-line: #DCDBCE;
+  --signal: #A8322A;
+  --signal-soft: #F1DAD6;
+  --tape: #2F6F63;
+  --tape-soft: #DCEAE5;
+  --reel: #C79B3B;
+  --reel-soft: #F3E7CB;
+  --mute: #5B6560;
+}
+
+/* Reduce motion accessibility toggle - disables the purely decorative
+   animations (avatar breathing/pulse, confetti, streak flicker) while
+   essential state changes (score updates, progress bars) still work,
+   just without the animated transition. */
+:root[data-reduce-motion='true'] .conv-avatar,
+:root[data-reduce-motion='true'] .confetti-piece {
+  animation: none !important;
+}
+
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {

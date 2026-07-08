@@ -7,6 +7,7 @@ import {
   speakNative,
   stopNativeSpeaking,
 } from '../services/nativeVoice';
+import { getSpeechRate, getSpeechVoiceName } from '../services/settingsStore';
 
 // Web path uses the browser's own live speech recognition - zero-tap, natural
 // conversation flow, at the cost of accuracy versus the batch Whisper approach
@@ -159,8 +160,16 @@ export function useVoice(onFinalTranscript) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    utterance.rate = 0.95;
+    // Falls back to the exact same defaults as before if Settings hasn't been
+    // touched - this is purely additive, nothing changes for someone who
+    // never opens Settings.
+    utterance.rate = getSpeechRate();
     utterance.pitch = 1.0;
+    const voiceName = getSpeechVoiceName();
+    if (voiceName) {
+      const match = window.speechSynthesis.getVoices().find((v) => v.name === voiceName);
+      if (match) utterance.voice = match;
+    }
     if (onDone) utterance.onend = onDone;
     window.speechSynthesis.speak(utterance);
   }, [isWebTtsSupported]);

@@ -17,6 +17,56 @@ const CATEGORY_LABELS = {
   realWorldExamples: 'using real-world examples',
 };
 
+/**
+ * Aggregates across ALL of a profile's interview sessions (not just recent,
+ * unlike getProfileInsights above) - this is the data behind the Coach screen:
+ * readiness, strong/weak categories, score trend. Still pure arithmetic over
+ * existing stored data, no new AI calls.
+ */
+export async function getCoachData(profileId) {
+  const sessions = await getSessionsByProfile(profileId);
+  const interviewSessions = sessions.filter((s) => s.mode === 'interview' && s.summaryResult?.categoryScores);
+
+  if (interviewSessions.length === 0) {
+    return { readiness: null, strongCategories: [], weakCategories: [], scoreTrend: [], roadmap: [], sessionCount: sessions.length };
+  }
+
+  const totals = {};
+  const counts = {};
+  interviewSessions.forEach((s) => {
+    Object.entries(s.summaryResult.categoryScores).forEach(([key, val]) => {
+      totals[key] = (totals[key] || 0) + val;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+  });
+  const averages = Object.keys(totals).map((key) => ({ key, avg: totals[key] / counts[key] }));
+  averages.sort((a, b) => b.avg - a.avg);
+
+  const strongCategories = averages.slice(0, 2).map((a) => a.key);
+  const weakCategories = averages.slice(-2).map((a) => a.key);
+
+  // Readiness: overall scores averaged and scaled to a percentage - simple,
+  // explainable arithmetic, not a mysterious black-box number.
+  const overallScores = interviewSessions.map((s) => s.summaryResult.overallScore).filter((n) => typeof n === 'number');
+  const readiness = overallScores.length
+    ? Math.round((overallScores.reduce((a, b) => a + b, 0) / overallScores.length) * 10)
+    : null;
+
+  // Oldest-first for a left-to-right trend line, last 10 sessions.
+  const scoreTrend = interviewSessions
+    .slice(0, 10)
+    .reverse()
+    .map((s) => s.summaryResult.overallScore);
+
+  const roadmap = interviewSessions[0]?.summaryResult?.learningRoadmap || [];
+
+  return { readiness, strongCategories, weakCategories, scoreTrend, roadmap, sessionCount: sessions.length };
+}
+
+export function categoryLabel(key) {
+  return CATEGORY_LABELS[key] || key;
+}
+
 export async function getProfileInsights(profileId) {
   const sessions = await getSessionsByProfile(profileId);
 
