@@ -23,6 +23,7 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
   const [isCallActive, setIsCallActive] = useState(false);
   const [messages, setMessages] = useState(initialMessages);
   const [questionNumber, setQuestionNumber] = useState(initialQuestionNumber);
+  const [priorAssessment, setPriorAssessment] = useState(null);
   const startTimeRef = useRef(Date.now());
 
   // Corrections are collected here as the conversation goes, but NOT rendered
@@ -65,9 +66,12 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
   const buildSystemPrompt = useCallback(() => {
     if (mode === 'casual') return buildCasualPrompt(config);
     if (mode === 'professional') return buildProfessionalPrompt(config);
-    if (mode === 'interview') return buildInterviewPrompt({ ...config, questionNumber });
+    if (mode === 'interview') {
+      const previousQuestions = messages.filter((m) => m.role === 'assistant').map((m) => m.content);
+      return buildInterviewPrompt({ ...config, questionNumber, previousQuestions, priorAssessment });
+    }
     throw new Error(`Unknown mode: ${mode}`);
-  }, [mode, config, questionNumber]);
+  }, [mode, config, questionNumber, messages, priorAssessment]);
 
   const handleUserTurn = async (userText, audioUrl = null) => {
     if (!userText.trim()) return;
@@ -89,6 +93,9 @@ export default function Conversation({ mode, config, onExit, initialMessages = [
         setCollectedCorrections((prev) => [...prev, ...result.corrections]);
       }
       setQuestionNumber((n) => n + 1);
+      if (mode === 'interview' && result.runningAssessment) {
+        setPriorAssessment(result.runningAssessment);
+      }
       setIsThinking(false);
       setIsSpeaking(true);
       speak(result.reply, {

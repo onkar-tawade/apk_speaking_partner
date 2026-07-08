@@ -43,8 +43,37 @@ export default function SessionSummary({ mode, isLoading, result, allCorrections
                   </div>
                 )}
 
+                {result.mistakes?.length > 0 && (
+                  <div className="summary-block">
+                    <p className="summary-block-title">Specific mistakes to fix</p>
+                    <ul>{result.mistakes.map((m, i) => <li key={i}>{m}</li>)}</ul>
+                  </div>
+                )}
+
+                {result.categoryScores && (
+                  <div className="summary-block">
+                    <p className="summary-block-title">Category breakdown</p>
+                    {Object.entries(result.categoryScores).map(([key, val]) => (
+                      <div key={key} className="cat-score-row">
+                        <span className="cat-score-label">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        <div className="cat-score-bar">
+                          <div className="cat-score-fill" style={{ width: `${(val / 10) * 100}%` }} />
+                        </div>
+                        <span className="cat-score-num">{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {result.communicationNotes && (
                   <p className="summary-note">{result.communicationNotes}</p>
+                )}
+
+                {result.learningRoadmap?.length > 0 && (
+                  <div className="summary-block">
+                    <p className="summary-block-title">Your next steps</p>
+                    <ul>{result.learningRoadmap.map((step, i) => <li key={i}>{step}</li>)}</ul>
+                  </div>
                 )}
 
                 {result.questionBreakdown?.length > 0 && (
